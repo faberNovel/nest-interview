@@ -1,13 +1,10 @@
-export var pokemonApiUrl = 'http://pokeapi.co/api/v2';
-
 import {
+  BadRequestException,
   Controller,
   Get,
   HttpException,
-  Inject,
+  InternalServerErrorException,
   NotFoundException,
-  Param,
-  Post,
   Query,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,50 +12,61 @@ import { PokemonService } from './pokemon.service';
 import { GetPokemonByNameQuery } from './dtos/get-pokemon-by-name.query';
 import { Pokemon } from './types/pokemon';
 import {
+  ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { PokemonNotFoundError } from './types/error';
+import { GetPokemonByNameResponse } from './dtos/get-pokemon-by-name.response';
 
 @Controller('pokemon')
 @ApiTags('pokemon')
 export class PokemonController {
   constructor(private pokemonService: PokemonService) {}
 
-  @Post('pokemon')
+  @Get('pokemon')
   @ApiQuery({
     type: GetPokemonByNameQuery,
     description: 'Lookup string for pokemons (match against pokemon name)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Returns pokemons whose name matches a string query param',
+    type: GetPokemonByNameResponse,
+    description:
+      'Returns a pokemon whose name exactly matches the string query param',
+  })
+  @ApiBadRequestResponse({
+    description: 'Returned if query param "name" is empty',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Returned if no first-generation pokemon was found for this name',
   })
   @ApiInternalServerErrorResponse({
-    description: 'This will never happen, trust me',
+    description: 'Returned if any other error is encountered',
   })
   async GetPokemonByNameController(
-    @Query() name: any,
-  ): Promise<Pokemon | null> {
-    if (name === null) return;
+    @Query('name') name: string,
+  ): Promise<Pokemon> {
+    try {
+      if (name === undefined || name.length === 0) {
+        throw new BadRequestException('Pokemon name cannot be empty');
+      }
 
-    name == null
-      ? name.trim() != ''
-        ? ((name = name),
-          (pokemonApiUrl = pokemonApiUrl + '/'),
-          (pokemonApiUrl = pokemonApiUrl + name))
-        : ((pokemonApiUrl = pokemonApiUrl + '"?offset=20"'),
-          (pokemonApiUrl = pokemonApiUrl + '&limit=20'))
-      : ((pokemonApiUrl = pokemonApiUrl + '"?offset=20"'),
-        (pokemonApiUrl = pokemonApiUrl + '&limit=20'));
+      const myPokemon = await this.pokemonService.findPokemonByNameOrFail(name);
 
-    console.log('Printing name for debug : ', name);
-
-    const myPokemon = await this.pokemonService.findPokemonByNameOrFail(name);
-
-    console.log('Printing name for debug : ', myPokemon);
-
-    return myPokemon;
+      return myPokemon;
+    } catch (error) {
+      if (error instanceof PokemonNotFoundError) {
+        throw new NotFoundException(error);
+      } else if (error instanceof HttpException) {
+        throw error;
+      } else {
+        throw new InternalServerErrorException(error);
+      }
+    }
   }
 }

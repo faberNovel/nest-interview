@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import got, { Got } from 'got';
+import got from 'got';
 import { Pokemon } from './types/pokemon';
-import { pokemonApiUrl } from './pokemon.controller';
-import { PokemonSpecies } from './types/species';
 
+import { PokemonSpecies } from './types/species';
+import { PokemonNotFoundError, UnexpectedError } from './types/error';
+
+const POKEMON_API_URL = 'http://pokeapi.co/api/v2';
+const FIRST_GENERATION_POKEMON_LAST_ID = 151;
 @Injectable()
 export class PokemonService {
-  private httpClient: Got;
-  constructor() {
-    this.httpClient = got.extend({
-      prefixUrl: pokemonApiUrl,
-      responseType: 'json',
-      throwHttpErrors: false,
-    });
-  }
+  private readonly httpClient = got.extend({
+    prefixUrl: POKEMON_API_URL,
+    responseType: 'json',
+    throwHttpErrors: false,
+  });
 
   async findPokemonByNameOrFail(pokemonName: string): Promise<Pokemon> {
     type GetPokemonResponse = {
@@ -30,7 +30,15 @@ export class PokemonService {
       .then((response) => response.body as unknown as GetPokemonResponse)
       .then((body) => {
         if (!body.id) {
-          return null;
+          throw new PokemonNotFoundError(
+            `No pokemon found for name '${pokemonName}'`,
+          );
+        }
+
+        if (body.id > FIRST_GENERATION_POKEMON_LAST_ID) {
+          throw new PokemonNotFoundError(
+            `Pokemon '${pokemonName}' is not first-generation: ID ${body.id} > ${FIRST_GENERATION_POKEMON_LAST_ID}`,
+          );
         }
 
         const types = body.types
@@ -50,7 +58,11 @@ export class PokemonService {
         };
       })
       .catch((error) => {
-        throw error;
+        if (error instanceof PokemonNotFoundError) {
+          throw error;
+        }
+
+        throw new UnexpectedError(error);
       });
   }
 }
