@@ -22,8 +22,10 @@ It was written by our latest trainee, `Jay Paltan`, and is expected to define on
 This route is expected to have the following behaviour:
 - `name` should be the exact name of a first-generation Pokemon (id from 1 to 151), and nothing else. If that is not the case, the API should return a 404 error.
 - `name` should not be empty. If that is the case, the API should return a 400 error.
-- it should use a robust authentication method and return a status 401 error if the user is not authenticated.
 - Pokemon data should be retrieved from the [PokeAPI v2](https://pokeapi.co/docs/v2).
+
+In addition, you might also be asked to look at the current authentication logic, but this will be specified by the inverviewer.
+- ideally, we want to use a robust and standard authentication method and return a status 401 error if the user is not authenticated.
 
 ## Your mission - Part 1: Code review
 
