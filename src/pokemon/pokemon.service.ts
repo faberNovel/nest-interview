@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import got from 'got';
 import { Pokemon } from './types/pokemon';
-
 import { PokemonSpecies } from './types/species';
+
 import { PokemonNotFoundError, UnexpectedError } from './types/error';
 
 const POKEMON_API_URL = 'http://pokeapi.co/api/v2';
@@ -16,6 +16,18 @@ export class PokemonService {
   });
 
   async findPokemonByNameOrFail(pokemonName: string): Promise<Pokemon> {
+    try {
+      return this.findPokemon(pokemonName);
+    } catch (error) {
+      if (error instanceof PokemonNotFoundError) {
+        throw error;
+      }
+
+      throw new UnexpectedError(error);
+    }
+  }
+
+  async findPokemon(pokemonName: string): Promise<Pokemon> {
     type GetPokemonResponse = {
       name: string;
       id: number;
@@ -25,10 +37,10 @@ export class PokemonService {
       species: PokemonSpecies;
     };
 
-    return await this.httpClient
+    return this.httpClient
       .get(`pokemon/${pokemonName}`)
       .then((response) => response.body as unknown as GetPokemonResponse)
-      .then((body) => {
+      .then(async (body) => {
         if (!body.id) {
           throw new PokemonNotFoundError(
             `No pokemon found for name '${pokemonName}'`,
@@ -41,28 +53,18 @@ export class PokemonService {
           );
         }
 
-        const types = body.types
-          .map((type) => type.type)
-          .map((type) => type.name);
-
+        // remap PokeAPI stats to a 'PokemonSpecs' object
         return {
           name: body.name,
           id: body.id,
           height: body.height,
           weight: body.weight,
-          types,
+          types: body.types.map((type) => type.type.name),
           species: {
             name: body.species.name,
             url: body.species.url,
           },
         };
-      })
-      .catch((error) => {
-        if (error instanceof PokemonNotFoundError) {
-          throw error;
-        }
-
-        throw new UnexpectedError(error);
       });
   }
 }
