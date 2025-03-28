@@ -97,7 +97,6 @@ export class PokemonService {
       });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async findAveragedStatsForTypes(types: string[]): Promise<PokemonStats> {
     // Tips: Use this type
 
@@ -120,14 +119,81 @@ export class PokemonService {
     // - Step 5: Get each pokemon's stats
     // - Step 6: Calculate and return the average stats
 
-    return {
-      hp: 0,
-      attack: 0,
-      defense: 0,
-      specialAttack: 0,
-      specialDefense: 0,
-      speed: 0,
+    type GetPokemonTypeResponse = {
+      pokemon: {
+        pokemon: {
+          name: string;
+          url: string;
+        };
+      }[];
     };
+
+    // Step 1: Use route GET `type/${pokemonType}` to retrieve all pokemons of a given type
+    const pokemonWithCommonTypes = await Promise.all(
+      types.map((pokemonType) =>
+        this.httpClient
+          .get(`type/${pokemonType}`)
+          .then(
+            (response) => response.body as unknown as GetPokemonTypeResponse,
+          ),
+      ),
+    );
+
+    // Step 2: Remove any non-first generation pokemon from the array of pokemons
+    const firstGenerationPokemons = pokemonWithCommonTypes.map(({ pokemon }) =>
+      pokemon
+        .map(({ pokemon }) => ({
+          id: parseInt(
+            pokemon.url
+              .replace('https://pokeapi.co/api/v2/pokemon', '')
+              .replaceAll('/', ''),
+          ),
+          name: pokemon.name,
+        }))
+        .filter((item) => item.id <= FIRST_GENERATION_POKEMON_LAST_ID),
+    );
+
+    // Step 3: Remove any duplicate in the array of pokemons
+    const pokemonsWithoutDuplicates = firstGenerationPokemons
+      .flat()
+      .reduce((acc, current) => {
+        if (!acc.some((item) => item.id === current.id)) {
+          acc.push(current);
+        }
+
+        return acc.sort();
+      }, []);
+
+    // Step 4: Get each pokemon's stats
+    const sameTypePokemonStats = await Promise.all(
+      pokemonsWithoutDuplicates.map(({ name }) => this.findPokemon(name)),
+    );
+
+    // Step 5: Calculate average for each stats and return
+    const numberOfSameTypePokemons = sameTypePokemonStats.length;
+
+    return sameTypePokemonStats.reduce(
+      (acc: PokemonStats, pokemon) => ({
+        hp: acc.hp + pokemon.stats.hp / numberOfSameTypePokemons,
+        attack: acc.attack + pokemon.stats.attack / numberOfSameTypePokemons,
+        defense: acc.defense + pokemon.stats.defense / numberOfSameTypePokemons,
+        specialAttack:
+          acc.specialAttack +
+          pokemon.stats.specialAttack / numberOfSameTypePokemons,
+        specialDefense:
+          acc.specialDefense +
+          pokemon.stats.specialDefense / numberOfSameTypePokemons,
+        speed: acc.speed + pokemon.stats.speed / numberOfSameTypePokemons,
+      }),
+      {
+        hp: 0.0,
+        attack: 0.0,
+        defense: 0.0,
+        specialAttack: 0.0,
+        specialDefense: 0.0,
+        speed: 0.0,
+      },
+    );
   }
 
   private extractStatFromResponse(
