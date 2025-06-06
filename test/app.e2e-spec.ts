@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { AppModule } from './../src/app.module';
+import { INestApplication } from '@nestjs/common';
 
 const secretPassword = 'password123+';
 
@@ -17,15 +19,19 @@ describe('NestJS app (e2e)', () => {
     await app.init();
   });
 
-  it('/hello (GET)', () => {
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('/hello (GET)', async () => {
     // When
     const response = request(app.getHttpServer()).get('/hello');
 
     // Then
-    return response.expect(200).expect('Hello World!');
+    return await response.expect(200).expect('Hello World!');
   });
 
-  it('/pokemon (GET) - valid pokemon name', () => {
+  it('/pokemon (GET) - valid pokemon name', async () => {
     // Given
     const validName = 'bulbasaur';
 
@@ -48,7 +54,7 @@ describe('NestJS app (e2e)', () => {
     });
   });
 
-  it('/pokemon (GET) - invalid pokemon name', () => {
+  it('/pokemon (GET) - invalid pokemon name', async () => {
     // Given
     const invalidName = 'abc';
 
@@ -61,7 +67,7 @@ describe('NestJS app (e2e)', () => {
     return response.expect(404);
   });
 
-  it('/pokemon (GET) - second generation pokemon name', () => {
+  it('/pokemon (GET) - second generation pokemon name', async () => {
     // Given
     const invalidName = 'togepi';
 
@@ -71,31 +77,31 @@ describe('NestJS app (e2e)', () => {
       .set('authorization', secretPassword);
 
     // Then
-    return response.expect(404);
+    return await response.expect(404);
   });
 
-  it('/pokemon (GET) - missing name', () => {
+  it('/pokemon (GET) - missing name', async () => {
     // When
     const response = request(app.getHttpServer())
       .get(`/pokemon/pokemon`)
       .set('authorization', secretPassword);
 
     // Then
-    return response.expect(400);
+    return await response.expect(400);
   });
 
-  it('/pokemon (GET) - empty name', () => {
+  it('/pokemon (GET) - empty name', async () => {
     // When
     const response = request(app.getHttpServer())
       .get(`/pokemon/pokemon?name=`)
       .set('authorization', secretPassword);
 
     // Then
-    return response.expect(400);
+    return await response.expect(400);
   });
 
   // Look at this test only if asked by the interviewer
-  it.skip('/pokemon (GET) - unauthenticated call', () => {
+  it.skip('/pokemon (GET) - unauthenticated call', async () => {
     // Given
     const validName = 'bulbasaur';
 
@@ -105,6 +111,6 @@ describe('NestJS app (e2e)', () => {
       .set('authorization', 'XXX');
 
     // Then
-    return response.expect(401).expect(undefined);
+    return await response.expect(401).expect(undefined);
   });
 });
