@@ -1,16 +1,11 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   HttpException,
   InternalServerErrorException,
   NotFoundException,
   Query,
-  UseInterceptors,
 } from '@nestjs/common';
-import { PokemonService } from './pokemon.service';
-import { GetPokemonByNameQuery } from './dtos/get-pokemon-by-name.query';
-import { Pokemon } from './types/pokemon';
 import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
@@ -19,13 +14,16 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PokemonNotFoundError } from './types/error';
+import { GetPokemonByNameQuery } from './dtos/get-pokemon-by-name.query';
 import { GetPokemonByNameResponse } from './dtos/get-pokemon-by-name.response';
+import { PokemonService } from './pokemon.service';
+import { PokemonNotFoundError } from './types/error';
+import { Pokemon } from './types/pokemon';
 
 @Controller('pokemon')
 @ApiTags('pokemon')
 export class PokemonController {
-  constructor(private pokemonService: PokemonService) {}
+  constructor(private readonly pokemonService: PokemonService) {}
 
   @Get('pokemon')
   @ApiQuery({
@@ -49,16 +47,10 @@ export class PokemonController {
     description: 'Returned if any other error is encountered',
   })
   async GetPokemonByNameController(
-    @Query('name') name: string,
+    @Query() { name }: GetPokemonByNameQuery,
   ): Promise<Pokemon> {
     try {
-      if (name === undefined || name.length === 0) {
-        throw new BadRequestException('Pokemon name cannot be empty');
-      }
-
-      const myPokemon = await this.pokemonService.findPokemonByNameOrFail(name);
-
-      return myPokemon;
+      return await this.pokemonService.findPokemonByNameOrFail(name);
     } catch (error) {
       if (error instanceof PokemonNotFoundError) {
         throw new NotFoundException(error);

@@ -22,7 +22,6 @@ export class PokemonService {
       if (error instanceof PokemonNotFoundError) {
         throw error;
       }
-
       throw new UnexpectedError(error);
     }
   }
