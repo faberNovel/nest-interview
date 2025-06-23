@@ -2,7 +2,7 @@ import * as request from 'supertest';
 
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './../src/app.module';
 
 describe('NestJS app (e2e)', () => {
@@ -14,6 +14,8 @@ describe('NestJS app (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe());
+
     await app.init();
   });
 
