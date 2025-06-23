@@ -14,7 +14,6 @@ import {
 import { PokemonService } from './pokemon.service';
 import { GetPokemonByNameQuery } from './dtos/get-pokemon-by-name.query';
 import { Pokemon } from './types/pokemon';
-import { AuthInterceptor } from '../auth/auth.interceptor';
 import {
   ApiInternalServerErrorResponse,
   ApiQuery,
@@ -24,7 +23,6 @@ import {
 
 @Controller('pokemon')
 @ApiTags('pokemon')
-@UseInterceptors(AuthInterceptor)
 export class PokemonController {
   constructor(private pokemonService: PokemonService) {}
 
